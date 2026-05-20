@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>RAG Chatbot — Documents</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+    <style>
+        :root { --brand: #6366f1; --brand-dark: #4f46e5; --bg: #0f172a; --surface: #1e293b; --surface2: #334155; }
+        body { background: var(--bg); color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; margin: 0; }
+        .sidebar { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid #1e293b; display: flex; flex-direction: column; padding: 1.25rem 1rem; }
+        .sidebar-logo { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; padding: 0 0.5rem; }
+        .sidebar-logo .icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); border-radius: 0.6rem; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .sidebar-logo span { font-weight: 700; font-size: 1.1rem; }
+        .nav-item-custom { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem; border-radius: 0.6rem; color: #94a3b8; text-decoration: none; font-size: 0.9rem; transition: all 0.15s; }
+        .nav-item-custom:hover { background: rgba(99,102,241,0.12); color: #e2e8f0; }
+        .nav-item-custom.active { background: rgba(99,102,241,0.2); color: var(--brand); font-weight: 600; }
+        .kb-stats { background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 0.75rem; padding: 0.875rem; margin-top: auto; }
+        .kb-stat-value { font-size: 1.5rem; font-weight: 700; color: var(--brand); }
+        .kb-stat-label { font-size: 0.75rem; color: #64748b; }
+        .user-badge { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem; border-radius: 0.6rem; background: var(--surface2); margin-top: 0.75rem; font-size: 0.85rem; }
+        .avatar { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: white; }
+        .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .page-header { padding: 1rem 1.5rem; border-bottom: 1px solid #1e293b; background: var(--surface); }
+        .content { padding: 1.5rem; max-width: 900px; width: 100%; }
+
+        /* Upload zone */
+        .upload-zone {
+            border: 2px dashed #334155; border-radius: 1rem; padding: 2.5rem;
+            text-align: center; cursor: pointer; transition: all 0.2s;
+            background: rgba(99,102,241,0.02);
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: var(--brand); background: rgba(99,102,241,0.06);
+        }
+        .upload-icon { font-size: 2.5rem; color: #475569; margin-bottom: 0.75rem; }
+        .upload-zone.drag-over .upload-icon { color: var(--brand); }
+        .btn-upload { background: linear-gradient(135deg, var(--brand), var(--brand-dark)); border: none; border-radius: 0.6rem; color: white; padding: 0.5rem 1.25rem; font-size: 0.875rem; cursor: pointer; }
+        .btn-upload:hover { opacity: 0.9; }
+        .supported-formats { font-size: 0.75rem; color: #475569; margin-top: 0.5rem; }
+
+        /* Progress */
+        .progress-card { background: var(--surface); border: 1px solid #334155; border-radius: 0.75rem; padding: 1rem; margin-top: 1rem; display: none; }
+        .progress { background: #1e293b; border-radius: 999px; height: 6px; }
+        .progress-bar { background: linear-gradient(90deg, var(--brand), var(--brand-dark)); border-radius: 999px; transition: width 0.3s; }
+
+        /* Alert */
+        .alert-custom { border-radius: 0.75rem; padding: 0.75rem 1rem; margin-top: 1rem; font-size: 0.875rem; display: none; }
+        .alert-success-custom { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #34d399; }
+        .alert-error-custom { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+
+        /* Document table */
+        .doc-card { background: var(--surface); border: 1px solid #1e293b; border-radius: 1rem; margin-top: 1.5rem; overflow: hidden; }
+        .doc-card-header { padding: 1rem 1.25rem; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 0.75rem; }
+        table { width: 100%; border-collapse: collapse; }
+        thead th { padding: 0.75rem 1.25rem; font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #1e293b; }
+        tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.1s; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: rgba(255,255,255,0.02); }
+        td { padding: 0.875rem 1.25rem; font-size: 0.875rem; color: #cbd5e1; }
+        .file-icon { width: 32px; height: 32px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+        .badge-type { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-weight: 600; }
+        .badge-pdf { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-txt { background: rgba(59,130,246,0.15); color: #93c5fd; }
+        .badge-md { background: rgba(168,85,247,0.15); color: #c4b5fd; }
+        .empty-state { padding: 3rem; text-align: center; color: #475569; }
+        .empty-state i { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; color: #334155; }
+    </style>
+</head>
+<body>
+<div class="d-flex h-100">
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="icon">🤖</div>
+            <span>RAG Chatbot</span>
+        </div>
+        <nav class="d-flex flex-column gap-1">
+            <a href="/chat" class="nav-item-custom">
+                <i class="bi bi-chat-dots"></i> Chat
+            </a>
+            <a href="/documents" class="nav-item-custom active">
+                <i class="bi bi-folder2-open"></i> Documents
+            </a>
+        </nav>
+        <div class="kb-stats mt-4">
+            <div class="text-muted small mb-2"><i class="bi bi-database me-1"></i>Knowledge Base</div>
+            <div class="d-flex justify-content-between">
+                <div>
+                    <div class="kb-stat-value" id="sideDocCount" th:text="${docCount}">0</div>
+                    <div class="kb-stat-label">Documents</div>
+                </div>
+                <div class="text-end">
+                    <div class="kb-stat-value" id="sideChunkCount" th:text="${chunkCount}">0</div>
+                    <div class="kb-stat-label">Chunks</div>
+                </div>
+            </div>
+        </div>
+        <div class="user-badge">
+            <div class="avatar" th:text="${#strings.toUpperCase(#strings.substring(username, 0, 1))}">U</div>
+            <span class="text-truncate" th:text="${username}">user</span>
+            <a href="/logout" class="ms-auto text-muted" title="Logout"><i class="bi bi-box-arrow-right"></i></a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header d-flex align-items-center gap-2">
+            <i class="bi bi-folder2-open" style="color:var(--brand);"></i>
+            <span class="fw-semibold">Document Manager</span>
+            <span class="text-muted small ms-2">— Upload PDFs and text files to the knowledge base</span>
+        </div>
+
+        <div class="content mx-auto">
+            <!-- Upload zone -->
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon"><i class="bi bi-cloud-upload"></i></div>
+                <h6 class="fw-semibold mb-1">Drop files here or click to browse</h6>
+                <p class="text-muted small mb-2">Upload IBM Redbooks, documentation, or any reference material</p>
+                <button class="btn-upload" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+                    <i class="bi bi-plus-lg me-1"></i>Choose File
+                </button>
+                <div class="supported-formats">PDF · TXT · MD &nbsp;|&nbsp; Max 200 MB per file</div>
+                <input type="file" id="fileInput" accept=".pdf,.txt,.md" style="display:none;" onchange="uploadFile(this)"/>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-card" id="progressCard">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="small" id="progressLabel">Processing…</span>
+                    <span class="small text-muted" id="progressPct">0%</span>
+                </div>
+                <div class="progress"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+            </div>
+
+            <!-- Alerts -->
+            <div class="alert-custom alert-success-custom" id="successAlert"></div>
+            <div class="alert-custom alert-error-custom" id="errorAlert"></div>
+
+            <!-- Document list -->
+            <div class="doc-card">
+                <div class="doc-card-header">
+                    <i class="bi bi-files" style="color:var(--brand);"></i>
+                    <span class="fw-semibold small">Loaded Documents</span>
+                    <span class="badge ms-auto" style="background:var(--surface2);color:#94a3b8;font-size:0.75rem;" id="docCountBadge" th:text="${docCount} + ' files'">0 files</span>
+                </div>
+                <div id="docTableWrapper">
+                    <div th:if="${documents.isEmpty()}" class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p class="mb-0">No documents loaded yet.<br/>Upload a file to get started.</p>
+                    </div>
+                    <table th:if="${!documents.isEmpty()}">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Type</th>
+                                <th>Chunks</th>
+                                <th>Size</th>
+                                <th>Uploaded</th>
+                            </tr>
+                        </thead>
+                        <tbody id="docTableBody">
+                            <tr th:each="doc : ${documents}">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="file-icon" th:classappend="${doc.fileType == 'PDF'} ? 'bg-danger bg-opacity-10' : 'bg-primary bg-opacity-10'">
+                                            <i th:class="${doc.fileType == 'PDF'} ? 'bi bi-file-earmark-pdf text-danger' : 'bi bi-file-earmark-text text-primary'"></i>
+                                        </div>
+                                        <span th:text="${doc.fileName}">file.pdf</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge-type" th:classappend="${doc.fileType == 'PDF'} ? 'badge-pdf' : (${doc.fileType == 'MD'} ? 'badge-md' : 'badge-txt')" th:text="${doc.fileType}">PDF</span></td>
+                                <td th:text="${doc.chunkCount}">0</td>
+                                <td th:text="${doc.formattedSize}">0 KB</td>
+                                <td th:text="${doc.uploadedAt}">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const progressCard = document.getElementById('progressCard');
+const progressBar = document.getElementById('progressBar');
+const progressLabel = document.getElementById('progressLabel');
+const progressPct = document.getElementById('progressPct');
+const successAlert = document.getElementById('successAlert');
+const errorAlert = document.getElementById('errorAlert');
+
+// Drag and drop
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+});
+
+function uploadFile(input) {
+    if (input.files[0]) processFile(input.files[0]);
+    input.value = '';
+}
+
+async function processFile(file) {
+    successAlert.style.display = 'none';
+    errorAlert.style.display = 'none';
+
+    progressLabel.textContent = `Processing: ${file.name}`;
+    progressPct.textContent = '0%';
+    progressBar.style.width = '0%';
+    progressCard.style.display = 'block';
+
+    // Animate progress (indeterminate-style)
+    let pct = 0;
+    const interval = setInterval(() => {
+        pct = Math.min(pct + Math.random() * 15, 85);
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = Math.round(pct) + '%';
+    }, 200);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const res = await fetch('/api/documents/upload', { method: 'POST', body: formData });
+        clearInterval(interval);
+        progressBar.style.width = '100%';
+        progressPct.textContent = '100%';
+
+        const data = await res.json();
+        setTimeout(() => { progressCard.style.display = 'none'; }, 600);
+
+        if (data.error) {
+            showAlert(errorAlert, '⚠ ' + data.error);
+        } else {
+            showAlert(successAlert, '✓ ' + data.message);
+            addDocToTable(data.document);
+            updateCounts();
+        }
+    } catch (err) {
+        clearInterval(interval);
+        progressCard.style.display = 'none';
+        showAlert(errorAlert, '⚠ Upload failed: ' + err.message);
+    }
+}
+
+function showAlert(el, msg) {
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 6000);
+}
+
+function addDocToTable(doc) {
+    const wrapper = document.getElementById('docTableWrapper');
+    const emptyState = wrapper.querySelector('.empty-state');
+    if (emptyState) {
+        wrapper.innerHTML = `<table>
+            <thead><tr><th>File</th><th>Type</th><th>Chunks</th><th>Size</th><th>Uploaded</th></tr></thead>
+            <tbody id="docTableBody"></tbody>
+        </table>`;
+    }
+    const tbody = document.getElementById('docTableBody');
+    const isPdf = (doc.fileType || '').toUpperCase() === 'PDF';
+    const isMd = (doc.fileType || '').toUpperCase() === 'MD';
+    const badgeClass = isPdf ? 'badge-pdf' : (isMd ? 'badge-md' : 'badge-txt');
+    const iconClass = isPdf ? 'bi bi-file-earmark-pdf text-danger' : 'bi bi-file-earmark-text text-primary';
+    const iconBg = isPdf ? 'bg-danger' : 'bg-primary';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+        <td><div class="d-flex align-items-center gap-2">
+            <div class="file-icon ${iconBg} bg-opacity-10"><i class="${iconClass}"></i></div>
+            <span>${escHtml(doc.fileName)}</span>
+        </div></td>
+        <td><span class="badge-type ${badgeClass}">${escHtml(doc.fileType)}</span></td>
+        <td>${doc.chunkCount}</td>
+        <td>${escHtml(doc.formattedSize || '-')}</td>
+        <td>${escHtml(doc.uploadedAt || new Date().toLocaleString())}</td>`;
+    tbody.insertBefore(tr, tbody.firstChild);
+}
+
+async function updateCounts() {
+    const res = await fetch('/api/health');
+    const data = await res.json();
+    document.getElementById('sideDocCount').textContent = data.documents;
+    document.getElementById('sideChunkCount').textContent = data.chunks;
+    document.getElementById('docCountBadge').textContent = data.documents + ' files';
+}
+
+function escHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = String(text || '');
+    return d.innerHTML;
+}
+</script>
+</body>
+</html>
