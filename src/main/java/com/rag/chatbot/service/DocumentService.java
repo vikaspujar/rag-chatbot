@@ -8,6 +8,7 @@ import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
@@ -74,7 +75,7 @@ public class DocumentService {
     }
 
     private String extractPdf(InputStream stream) throws IOException {
-        try (PDDocument doc = PDDocument.load(stream)) {
+        try (PDDocument doc = Loader.loadPDF(stream.readAllBytes())) {
             PDFTextStripper stripper = new PDFTextStripper();
             return stripper.getText(doc);
         }
