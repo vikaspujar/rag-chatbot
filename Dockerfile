@@ -12,7 +12,7 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
 # ONNX Runtime (used by langchain4j embeddings) requires libstdc++
-RUN apk add --no-cache libstdc++
+RUN apk add --no-cache libstdc++ gcompat
 
 # Non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
